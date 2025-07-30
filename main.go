@@ -35,9 +35,9 @@ var userAgents = []string{
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Safari/537.36",
 }
 
-func randomUserAgent() {
-	rand.Seed(time.Now().Unix())
-	randNum := rand.Int() % len(userAgents)
+func randomUserAgent() string {
+	rand.Seed(time.Now().UnixNano())
+	randNum := rand.Intn(len(userAgents))
 	return userAgents[randNum]
 }
 
@@ -115,6 +115,7 @@ func scrapeURLs(urls []string, parser Parser, concurrency int)[]SeoData {
 	worklist := make(chan []string) 
 	results := []SeoData{}
 
+	n++
 	go func() {worklist <- urls}()
 	for ; n > 0; n--{
 		list := <-worklist
@@ -144,16 +145,16 @@ func extractUrls(response *http.Response) ([]string, error) {
 	}
 	results := []string{}
 	sel := doc.Find("loc")
-	for i := range sel.Nodes{
-		loc := sel.Eq(i)
-		result := append(results, result)
-	}
+	for i := range sel.Nodes {
+	loc := sel.Eq(i).Text()
+	results = append(results, loc)
+}
 	return results, nil
 }
 
-func scrapePage(url string, parser Parser)(SeoData, error) {
+func scrapePage(url string, tokens chan struct{},parser Parser)(SeoData, error) {
   
-	 res, err := crawlPage(url)
+	 res, err := crawlPage(url, tokens)
 	 if err != nil {
 		 return SeoData{}, err
 	 }
@@ -185,7 +186,8 @@ func (d DefaultParser)getSEOData(resp *http.Response)(SeoData, error) {
 		result.StatusCode = resp.StatusCode
 		result.Title = doc.Find("title").First().Text()
 		result.H1 = doc.Find("h1").First().Text()
-		result.MetaDescription = doc.Find("meta[name^=description]").Attr("content")
+		desc, _ := doc.Find("meta[name^=description]").Attr("content")
+    result.MetaDescription = desc
 		return result, nil
 }
 
@@ -201,6 +203,7 @@ func main() {
 	p := DefaultParser{}
 	results := ScrapeSiteMap("https://www.quicksprout.com/sitemap.xml", p, 10)
 	for _, result := range results {
-		fmt.Println(res)
-	}
+	fmt.Println(result)
+}
+
 }
